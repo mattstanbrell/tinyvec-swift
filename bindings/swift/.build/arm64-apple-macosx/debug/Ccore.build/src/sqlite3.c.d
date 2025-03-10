@@ -1,6 +1,6 @@
 dependencies: \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/Darwin.modulemap \
-  /Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/Ccore/src/sqlite3.c \
+  /Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/Sources/Ccore/src/sqlite3.c \
   /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include/stdarg.h \
   /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include/module.modulemap \
   /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include/__stdarg___gnuc_va_list.h \

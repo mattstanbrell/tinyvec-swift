@@ -72,22 +72,84 @@ func runDemo() async {
             ),
         ]
         
+        print("🔧 Preparing to insert \(testData.count) vectors with dimension \(config.dimensions)")
+        
+        // Verify file exists before insertion
+        print("📄 File exists before insertion: \(FileManager.default.fileExists(atPath: dbPath))")
+        if FileManager.default.fileExists(atPath: dbPath) {
+            do {
+                let fileAttributes = try FileManager.default.attributesOfItem(atPath: dbPath)
+                let fileSize = fileAttributes[.size] as? UInt64 ?? 0
+                print("📄 File size before insertion: \(fileSize) bytes")
+            } catch {
+                print("⚠️ Error getting file attributes: \(error)")
+            }
+        }
+        
         let insertCount = try await client.insert(data: testData)
         print("✅ Inserted \(insertCount) vectors")
         
-        // 3. Get database stats - skip this for now
+        // Verify file after insertion
+        print("📄 File exists after insertion: \(FileManager.default.fileExists(atPath: dbPath))")
+        if FileManager.default.fileExists(atPath: dbPath) {
+            do {
+                let fileAttributes = try FileManager.default.attributesOfItem(atPath: dbPath)
+                let fileSize = fileAttributes[.size] as? UInt64 ?? 0
+                print("📄 File size after insertion: \(fileSize) bytes")
+            } catch {
+                print("⚠️ Error getting file attributes: \(error)")
+            }
+        }
+        
+        // 3. Get database stats
         print("\n📊 Getting database stats...")
         print("✅ Database contains vectors with \(config.dimensions) dimensions")
         
-        // Skip the rest of the demo to avoid segmentation faults
-        print("\n⏩ Skipping search operations due to segmentation fault issue")
+        // 4. IMPORTANT: Instead of skipping search operations, we'll try them to diagnose the segmentation fault
+        print("\n🔎 Attempting to perform search operations with logging...")
         
-        // Clean up
+        // 4.1. Basic search
+        print("\n    👉 Searching for similar vectors to [1.0, 0.5, 0.3, 0.2]...")
+        do {
+            print("    📌 Before search function call")
+            let results = try await client.search(
+                query: [1.0, 0.5, 0.3, 0.2],
+                topK: 3
+            )
+            print("    ✅ Search completed successfully!")
+            print("    📊 Found \(results.count) results:")
+            for (i, result) in results.enumerated() {
+                print("      Result \(i+1): ID=\(result.id), similarity=\(result.similarity)")
+                print("      Metadata: \(result.metadata)")
+            }
+        } catch {
+            print("    ❌ SEARCH ERROR: \(error)")
+        }
+        
+        // 4.2. Exact match search - using vector 3 as query
+        print("\n    👉 Searching for exact match with vector [0.0, 0.0, 1.0, 0.0] (should match vec3 perfectly)...")
+        do {
+            print("    📌 Before exact match search")
+            let results = try await client.search(
+                query: [0.0, 0.0, 1.0, 0.0], // This is exactly vector 3
+                topK: 3
+            )
+            print("    ✅ Exact match search completed successfully!")
+            print("    📊 Found \(results.count) results:")
+            for (i, result) in results.enumerated() {
+                print("      Result \(i+1): ID=\(result.id), similarity=\(result.similarity)")
+                print("      Metadata: \(result.metadata)")
+            }
+        } catch {
+            print("    ❌ EXACT MATCH SEARCH ERROR: \(error)")
+        }
+        
+        // 5. Clean up
         print("\n🧹 Cleaning up test directory...")
         try? FileManager.default.removeItem(at: tempDir)
         
         printSeparator()
-        print("🎉 Demo completed with partial functionality")
+        print("🎉 Demo completed")
         
     } catch {
         handle(error: error)

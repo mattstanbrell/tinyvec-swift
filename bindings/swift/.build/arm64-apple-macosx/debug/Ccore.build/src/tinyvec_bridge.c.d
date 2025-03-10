@@ -1,9 +1,9 @@
 dependencies: \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/Darwin.modulemap \
-  /Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/Ccore/src/tinyvec_bridge.c \
-  /Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/Ccore/src/../module.modulemap \
-  /Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/Ccore/src/../include/tinyvec_bridge.h \
-  /Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/Ccore/src/../include/db.h \
+  /Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/Sources/Ccore/src/tinyvec_bridge.c \
+  /Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/Sources/Ccore/src/../module.modulemap \
+  /Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/Sources/Ccore/src/../include/tinyvec_bridge.h \
+  /Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/Sources/Ccore/src/../include/db.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/DarwinFoundation.modulemap \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/os_availability.modulemap \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/AvailabilityInternal.h \
@@ -707,7 +707,7 @@ dependencies: \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/libc.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/paths.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/sysexits.h \
-  /Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/Ccore/src/../include/file.h \
-  /Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/Ccore/src/../include/cJSON.h \
-  /Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/Ccore/src/../include/vec_types.h \
-  /Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/Ccore/src/../include/sqlite3.h
+  /Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/Sources/Ccore/src/../include/file.h \
+  /Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/Sources/Ccore/src/../include/cJSON.h \
+  /Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/Sources/Ccore/src/../include/vec_types.h \
+  /Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/Sources/Ccore/src/../include/sqlite3.h

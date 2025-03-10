@@ -1,6 +1,6 @@
 dependencies: \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/Darwin.modulemap \
-  /Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/Ccore/src/minheap.c \
+  /Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/Sources/Ccore/src/minheap.c \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/stdlib.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/c_standard_library.modulemap \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/os_availability.modulemap \
@@ -172,5 +172,5 @@ dependencies: \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/_ctermid.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/secure/_stdio.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/xlocale/_stdio.h \
-  /Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/Ccore/src/../module.modulemap \
-  /Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/Ccore/src/../include/vec_types.h
+  /Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/Sources/Ccore/src/../module.modulemap \
+  /Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/Sources/Ccore/src/../include/vec_types.h

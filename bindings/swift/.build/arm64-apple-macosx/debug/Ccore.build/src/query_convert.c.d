@@ -1,6 +1,6 @@
 dependencies: \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/Darwin.modulemap \
-  /Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/Ccore/src/query_convert.c \
+  /Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/Sources/Ccore/src/query_convert.c \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/stdio.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/c_standard_library.modulemap \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/DarwinFoundation.modulemap \
@@ -173,6 +173,6 @@ dependencies: \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/secure/_string.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/xlocale/_string.h \
   /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/16/include/stdbool.h \
-  /Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/Ccore/src/../module.modulemap \
-  /Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/Ccore/src/../include/cJSON.h \
-  /Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/Ccore/src/../include/query_convert.h
+  /Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/Sources/Ccore/src/../module.modulemap \
+  /Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/Sources/Ccore/src/../include/cJSON.h \
+  /Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/Sources/Ccore/src/../include/query_convert.h

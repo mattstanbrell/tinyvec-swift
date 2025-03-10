@@ -1,11 +1,11 @@
 {
   "": {
-    "swift-dependencies": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVecDemo.build/master.swiftdeps"
+    "swift-dependencies": "/Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/.build/arm64-apple-macosx/debug/TinyVecDemo.build/master.swiftdeps"
   },
-  "/Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/TinyVecDemo/main.swift": {
-    "dependencies": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVecDemo.build/main.d",
-    "object": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVecDemo.build/main.swift.o",
-    "swiftmodule": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVecDemo.build/main~partial.swiftmodule",
-    "swift-dependencies": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVecDemo.build/main.swiftdeps"
+  "/Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/Sources/TinyVecDemo/main.swift": {
+    "dependencies": "/Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/.build/arm64-apple-macosx/debug/TinyVecDemo.build/main.d",
+    "object": "/Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/.build/arm64-apple-macosx/debug/TinyVecDemo.build/main.swift.o",
+    "swiftmodule": "/Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/.build/arm64-apple-macosx/debug/TinyVecDemo.build/main~partial.swiftmodule",
+    "swift-dependencies": "/Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/.build/arm64-apple-macosx/debug/TinyVecDemo.build/main.swiftdeps"
   }
 }
