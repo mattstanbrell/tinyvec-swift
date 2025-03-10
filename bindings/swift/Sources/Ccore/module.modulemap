@@ -1,0 +1,7 @@
+module Ccore {
+    umbrella header "include/vec_types.h"
+    header "include/db.h"
+    header "include/file.h"
+    header "include/tinyvec_bridge.h"
+    export *
+}

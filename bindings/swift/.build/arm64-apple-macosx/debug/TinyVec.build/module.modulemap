@@ -1,0 +1,4 @@
+module TinyVec {
+    header "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVec.build/TinyVec-Swift.h"
+    requires objc
+}

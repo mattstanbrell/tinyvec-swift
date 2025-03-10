@@ -1,0 +1,29 @@
+{
+  "": {
+    "swift-dependencies": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVec.build/master.swiftdeps"
+  },
+  "/Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/TinyVec/TinyVecCFunctions.swift": {
+    "dependencies": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVec.build/TinyVecCFunctions.d",
+    "object": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVec.build/TinyVecCFunctions.swift.o",
+    "swiftmodule": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVec.build/TinyVecCFunctions~partial.swiftmodule",
+    "swift-dependencies": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVec.build/TinyVecCFunctions.swiftdeps"
+  },
+  "/Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/TinyVec/TinyVecClient.swift": {
+    "dependencies": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVec.build/TinyVecClient.d",
+    "object": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVec.build/TinyVecClient.swift.o",
+    "swiftmodule": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVec.build/TinyVecClient~partial.swiftmodule",
+    "swift-dependencies": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVec.build/TinyVecClient.swiftdeps"
+  },
+  "/Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/TinyVec/TinyVecError.swift": {
+    "dependencies": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVec.build/TinyVecError.d",
+    "object": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVec.build/TinyVecError.swift.o",
+    "swiftmodule": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVec.build/TinyVecError~partial.swiftmodule",
+    "swift-dependencies": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVec.build/TinyVecError.swiftdeps"
+  },
+  "/Users/gauntlet/Desktop/tinyvec/bindings/swift/Sources/TinyVec/TinyVecTypes.swift": {
+    "dependencies": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVec.build/TinyVecTypes.d",
+    "object": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVec.build/TinyVecTypes.swift.o",
+    "swiftmodule": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVec.build/TinyVecTypes~partial.swiftmodule",
+    "swift-dependencies": "/Users/gauntlet/Desktop/tinyvec/bindings/swift/.build/arm64-apple-macosx/debug/TinyVec.build/TinyVecTypes.swiftdeps"
+  }
+}
