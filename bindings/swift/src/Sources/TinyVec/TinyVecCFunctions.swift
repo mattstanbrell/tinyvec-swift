@@ -59,7 +59,7 @@ public func get_index_file_stats_from_db(
 ) -> IndexFileStats
 
 // Helper functions
-@_silgen_name("update_instance_db_file_connection")
-public func update_instance_db_file_connection(
+@_silgen_name("update_db_file_connection")
+public func update_db_file_connection(
     _ filePath: UnsafePointer<CChar>
 ) -> Bool

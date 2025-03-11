@@ -64,3 +64,19 @@ Thumbs.db
 /benchmarks/python/benchmarks/db-files/
 /benchmarks/python/benchmarks/metrics.json
 /benchmarks/python/benchmarks/combined_benchmark_results.html
+
+# Swift specific
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+timeline.xctimeline
+playground.xcworkspace
+
+# API Keys and Configuration
+TinyVecTest/TinyVecTest/Config.swift

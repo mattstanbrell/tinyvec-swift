@@ -113,34 +113,27 @@ public final class TinyVecClient {
     @discardableResult
     public func insert(data: [TinyVecInsertion]) async throws -> Int {
         // Validate input data
-        print("[SWIFT INSERT] Starting insertion of \(data.count) vectors")
         guard !data.isEmpty else {
-            print("[SWIFT INSERT] Nothing to insert")
             return 0 // Nothing to insert
         }
         
         // Validate vector dimensions
         for item in data {
             guard item.vector.count == Int(dimensions) else {
-                print("[SWIFT INSERT] Dimension mismatch: \(item.vector.count) vs expected \(dimensions)")
                 throw TinyVecError.invalidInput("Vector dimension \(item.vector.count) does not match expected dimension \(dimensions)")
             }
         }
         
         // Update database connection to ensure file handle is valid
-        print("[SWIFT INSERT] Updating database connection")
         let connectionUpdated = filePath.withCString { filePathCString in
             update_db_file_connection(filePathCString)
         }
         if !connectionUpdated {
-            print("[SWIFT INSERT] Failed to update database connection")
             throw TinyVecError.operationFailed("Failed to update database connection before insert")
         }
-        print("[SWIFT INSERT] Database connection updated successfully")
         
         // Create temp file path
         let tempPath = filePath + ".temp"
-        print("[SWIFT INSERT] Using temp file path: \(tempPath)")
         
         // Copy the main file to the temp file
         let fileManager = FileManager.default
@@ -152,13 +145,9 @@ public final class TinyVecClient {
             
             // Copy main file to temp
             try fileManager.copyItem(atPath: filePath, toPath: tempPath)
-            print("[SWIFT INSERT] Copied main file to temp file")
         } catch {
-            print("[SWIFT INSERT] Error setting up temp file: \(error)")
             throw TinyVecError.operationFailed("Failed to prepare temp file: \(error.localizedDescription)")
         }
-        
-        print("[SWIFT INSERT] Preparing memory for \(data.count) vectors, each with \(dimensions) dimensions")
         
         // Prepare vectors array
         let vectorsCount = data.count
@@ -177,7 +166,6 @@ public final class TinyVecClient {
                 vectorPointer[j] = vector[j]
             }
             vectorsPointers[i] = vectorPointer
-            print("[SWIFT INSERT] Prepared vector \(i+1): \(vector)")
             
             // Convert metadata to JSON string
             do {
@@ -186,7 +174,6 @@ public final class TinyVecClient {
                     let cString = strdup(jsonString)
                     metadatasPointers[i] = cString
                     metadataLengths[i] = UInt(jsonString.utf8.count)
-                    print("[SWIFT INSERT] Prepared metadata \(i+1): \(jsonString)")
                 } else {
                     throw TinyVecError.dataError("Failed to convert metadata to string for vector \(i)")
                 }
@@ -196,7 +183,6 @@ public final class TinyVecClient {
         }
         
         // Call C function to insert data
-        print("[SWIFT INSERT] Calling insert_many_vectors with file path: \(filePath)")
         var result: Int32 = 0
         result = filePath.withCString { filePathCString in
             insert_many_vectors(
@@ -208,10 +194,8 @@ public final class TinyVecClient {
                 dimensions
             )
         }
-        print("[SWIFT INSERT] insert_many_vectors returned: \(result)")
         
         // Clean up allocated memory
-        print("[SWIFT INSERT] Cleaning up allocated memory")
         for i in 0..<vectorsCount {
             if let vectorPtr = vectorsPointers[i] {
                 vectorPtr.deallocate()
@@ -226,7 +210,6 @@ public final class TinyVecClient {
         
         // Check for errors
         if result < 0 {
-            print("[SWIFT INSERT] Error: insert_many_vectors returned \(result)")
             throw TinyVecError.operationFailed("Failed to insert vectors. Error code: \(result)")
         }
         
@@ -242,36 +225,18 @@ public final class TinyVecClient {
                     
                     // Copy temp file to main file
                     try fileManager.copyItem(atPath: tempPath, toPath: filePath)
-                    print("[SWIFT INSERT] Copied temp file back to main file")
-                } else {
-                    print("[SWIFT INSERT] Warning: Temp file does not exist after insertion")
                 }
             } catch {
-                print("[SWIFT INSERT] Error copying temp file to main file: \(error)")
                 throw TinyVecError.operationFailed("Failed to finalize insertion: \(error.localizedDescription)")
             }
         }
         
         // Clean up temp file
-        do {
-            if fileManager.fileExists(atPath: tempPath) {
-                try fileManager.removeItem(atPath: tempPath)
-                print("[SWIFT INSERT] Removed temp file")
-            }
-        } catch {
-            print("[SWIFT INSERT] Warning: Failed to remove temp file: \(error)")
-        }
+        try? fileManager.removeItem(atPath: tempPath)
         
         // Update the connection to ensure it's valid after insert operation
-        print("[SWIFT INSERT] Re-updating database connection after insertion")
-        let connectionReUpdated = filePath.withCString { filePathCString in
+        _ = filePath.withCString { filePathCString in
             update_db_file_connection(filePathCString)
-        }
-        if !connectionReUpdated {
-            print("[SWIFT INSERT] Warning: Failed to update connection after insert")
-            print("Warning: Failed to update connection after insert, searches may fail")
-        } else {
-            print("[SWIFT INSERT] Connection successfully updated after insertion")
         }
         
         return Int(result)
@@ -294,79 +259,56 @@ public final class TinyVecClient {
         options: TinyVecSearchOptions? = nil
     ) async throws -> [TinyVecSearchResult] {
         // Validate inputs
-        print("[SWIFT DEBUG] Starting search with query dimensions: \(query.count), topK: \(topK)")
         guard !query.isEmpty else {
-            print("[SWIFT DEBUG] Error: Query vector is empty")
             throw TinyVecError.invalidInput("Query vector cannot be empty")
         }
         
         guard query.count == Int(dimensions) else {
-            print("[SWIFT DEBUG] Error: Query dimension mismatch - got \(query.count), expected \(dimensions)")
             throw TinyVecError.invalidInput("Query vector dimension \(query.count) does not match expected dimension \(dimensions)")
         }
         
         guard topK > 0 else {
-            print("[SWIFT DEBUG] Error: Invalid topK value: \(topK)")
             throw TinyVecError.invalidInput("topK must be greater than 0")
         }
         
         // Update database connection to ensure file handle is valid
-        print("[SWIFT DEBUG] Updating database connection before search")
         let connectionUpdated = filePath.withCString { filePathCString in
             update_db_file_connection(filePathCString)
         }
         if !connectionUpdated {
-            print("[SWIFT DEBUG] Failed to update database connection")
             throw TinyVecError.operationFailed("Failed to update database connection before search")
         }
-        print("[SWIFT DEBUG] Database connection updated successfully")
         
         // Convert query to C array
-        print("[SWIFT DEBUG] Allocating memory for query array")
         let queryArray = UnsafeMutablePointer<Float>.allocate(capacity: query.count)
-        defer { 
-            print("[SWIFT DEBUG] Deallocating query array")
-            queryArray.deallocate() 
-        }
+        defer { queryArray.deallocate() }
         
-        print("[SWIFT DEBUG] Copying query vector to C array")
         for i in 0..<query.count {
             queryArray[i] = query[i]
         }
         
         // Call C function to perform search
-        print("[SWIFT DEBUG] Calling vector_query C function with path: \(filePath)")
         var searchResult: UnsafeMutablePointer<DBSearchResult>? = nil
         
         searchResult = filePath.withCString { filePathCString in
-            print("[SWIFT DEBUG] Inside withCString closure for file path")
-            let result = vector_query(filePathCString, queryArray, Int32(topK))
-            print("[SWIFT DEBUG] vector_query returned: \(result != nil ? "non-nil pointer" : "nil")")
-            return result
+            vector_query(filePathCString, queryArray, Int32(topK))
         }
         
         // Check for failed search
         guard let result = searchResult else {
-            print("[SWIFT DEBUG] Search failed - vector_query returned nil")
             throw TinyVecError.operationFailed("Vector search failed")
         }
         
         // Convert C results to Swift objects
         let resultCount = Int(result.pointee.count)
-        print("[SWIFT DEBUG] Search returned \(resultCount) results")
         var swiftResults: [TinyVecSearchResult] = []
         
         if resultCount > 0 && result.pointee.results != nil {
-            print("[SWIFT DEBUG] Processing search results")
             let results = result.pointee.results!
             
             for i in 0..<resultCount {
-                print("[SWIFT DEBUG] Converting result \(i+1)/\(resultCount)")
                 let vecResult = results[i]
-                print("[SWIFT DEBUG] Result \(i+1): ID=\(vecResult.index), similarity=\(vecResult.similarity)")
-                
                 let metadata = Helpers.metadataToDict(vecResult.metadata)
-                print("[SWIFT DEBUG] Metadata converted: \(metadata)")
                 
                 swiftResults.append(
                     TinyVecSearchResult(
@@ -379,23 +321,17 @@ public final class TinyVecClient {
         }
         
         // Free the C search result
-        print("[SWIFT DEBUG] Beginning to free C search result memory")
         if result.pointee.results != nil {
             for i in 0..<resultCount {
-                print("[SWIFT DEBUG] Checking metadata memory for result \(i+1)")
                 // Free metadata data if needed
                 if let metadataData = result.pointee.results![i].metadata.data {
-                    print("[SWIFT DEBUG] Deallocating metadata for result \(i+1)")
                     metadataData.deallocate()
                 }
             }
-            print("[SWIFT DEBUG] Deallocating results array")
             result.pointee.results!.deallocate()
         }
-        print("[SWIFT DEBUG] Deallocating search result struct")
         result.deallocate()
         
-        print("[SWIFT DEBUG] Search completed successfully, returning \(swiftResults.count) results")
         return swiftResults
     }
     
@@ -426,6 +362,10 @@ public final class TinyVecClient {
         
         guard topK > 0 else {
             throw TinyVecError.invalidInput("topK must be greater than 0")
+        }
+        
+        guard !filter.filter.isEmpty else {
+            throw TinyVecError.invalidInput("Filter cannot be empty")
         }
         
         // Update database connection to ensure file handle is valid
