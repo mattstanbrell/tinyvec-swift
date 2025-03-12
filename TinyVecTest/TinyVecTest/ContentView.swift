@@ -19,6 +19,7 @@ struct ContentView: View {
     @State private var embeddings: [[Float]] = []
     @State private var useRandomVectors: Bool = false
     @State private var totalVectorsCount: Int = 0
+    @State private var randomVectorCount: Int = 0
     
     // Enhanced timing measurements
     @State private var overallTimeMillis: Double = 0
@@ -99,10 +100,11 @@ struct ContentView: View {
                         }
                         .disabled(dbPath.isNotEmpty)
                         
-                        VStack {
+                        VStack(spacing: 10) {
                             Button(action: {
                                 Task {
                                     useRandomVectors = false
+                                    randomVectorCount = 0
                                     await insertVectors()
                                 }
                             }) {
@@ -112,7 +114,7 @@ struct ContentView: View {
                                     Text("Insert 10")
                                         .font(.caption)
                                 }
-                                .frame(width: 80, height: 80)
+                                .frame(width: 80, height: 60)
                                 .background(Color.green.opacity(0.2))
                                 .cornerRadius(10)
                             }
@@ -121,17 +123,37 @@ struct ContentView: View {
                             Button(action: {
                                 Task {
                                     useRandomVectors = true
+                                    randomVectorCount = 990
                                     await insertVectors()
                                 }
                             }) {
                                 VStack {
                                     Image(systemName: "arrow.down.doc.fill")
                                         .font(.system(size: 24))
-                                    Text("Insert 1000")
+                                    Text("Insert 1K")
                                         .font(.caption)
                                 }
-                                .frame(width: 80, height: 80)
+                                .frame(width: 80, height: 60)
                                 .background(Color.green.opacity(0.4))
+                                .cornerRadius(10)
+                            }
+                            .disabled(client == nil)
+                            
+                            Button(action: {
+                                Task {
+                                    useRandomVectors = true
+                                    randomVectorCount = 99990
+                                    await insertVectors()
+                                }
+                            }) {
+                                VStack {
+                                    Image(systemName: "arrow.down.doc.fill")
+                                        .font(.system(size: 24))
+                                    Text("Insert 100K")
+                                        .font(.caption)
+                                }
+                                .frame(width: 80, height: 60)
+                                .background(Color.green.opacity(0.6))
                                 .cornerRadius(10)
                             }
                             .disabled(client == nil)
@@ -268,7 +290,7 @@ struct ContentView: View {
             var vectorData: [TinyVecInsertion] = []
             
             if useRandomVectors {
-                // Insert 10 real vectors + 990 random vectors
+                // Insert 10 real vectors + random vectors
                 statusMessage = "Getting embeddings for 10 real documents..."
                 
                 // First get embeddings for the real documents
@@ -290,24 +312,45 @@ struct ContentView: View {
                     ))
                 }
                 
-                // Generate 990 random vectors
-                statusMessage = "Generating 990 random vectors..."
+                // Generate random vectors
+                let totalVectors = 10 + randomVectorCount
+                statusMessage = "Generating \(randomVectorCount) random vectors..."
                 
-                for i in 0..<990 {
-                    let randomVector = generateRandomVector(dimension: 512)
-                    let metadata: [String: String] = [
-                        "id": "random\(i+1)",
-                        "title": "Random Vector \(i+1)",
-                        "text": "This is a randomly generated vector for testing performance."
-                    ]
+                // For large numbers of vectors, insert in batches to avoid memory issues
+                let batchSize = 10000
+                let totalBatches = (randomVectorCount + batchSize - 1) / batchSize // Ceiling division
+                
+                for batchIndex in 0..<totalBatches {
+                    let startIndex = batchIndex * batchSize
+                    let endIndex = min(startIndex + batchSize, randomVectorCount)
+                    let currentBatchSize = endIndex - startIndex
                     
-                    vectorData.append(TinyVecInsertion(
-                        vector: randomVector,
-                        metadata: metadata
-                    ))
+                    statusMessage = "Generating batch \(batchIndex + 1) of \(totalBatches) (\(currentBatchSize) vectors)"
+                    
+                    var batchVectors: [TinyVecInsertion] = []
+                    
+                    for i in startIndex..<endIndex {
+                        let randomVector = generateRandomVector(dimension: 512)
+                        let metadata: [String: String] = [
+                            "id": "random\(i+1)",
+                            "title": "Random Vector \(i+1)",
+                            "text": "This is a randomly generated vector for testing performance."
+                        ]
+                        
+                        batchVectors.append(TinyVecInsertion(
+                            vector: randomVector,
+                            metadata: metadata
+                        ))
+                    }
+                    
+                    // Add batch to main vector data
+                    vectorData.append(contentsOf: batchVectors)
+                    
+                    // For very large datasets, we could insert each batch separately
+                    // but for simplicity, we'll collect all vectors and insert at once
                 }
                 
-                statusMessage = "Inserting 1000 vectors with dimension 512"
+                statusMessage = "Inserting \(totalVectors) vectors with dimension 512"
             } else {
                 // Just insert the 10 real vectors
                 statusMessage = "Getting embeddings from Voyage AI API..."
@@ -345,7 +388,8 @@ struct ContentView: View {
                 do {
                     let fileAttributes = try FileManager.default.attributesOfItem(atPath: dbPath)
                     let fileSize = fileAttributes[.size] as? UInt64 ?? 0
-                    statusMessage += " | Database file size: \(fileSize) bytes"
+                    let fileSizeMB = Double(fileSize) / (1024 * 1024)
+                    statusMessage += " | Database file size: \(String(format: "%.2f", fileSizeMB)) MB"
                 } catch {
                     statusMessage += " | Error getting file size: \(error.localizedDescription)"
                 }
