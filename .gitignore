@@ -78,5 +78,12 @@ Thumbs.db
 timeline.xctimeline
 playground.xcworkspace
 
+
 # API Keys and Configuration
 TinyVecTest/TinyVecTest/Config.swift
+
+
+CLAUDE.md 
+PLAN.md
+
+bindings/swift/.build/
