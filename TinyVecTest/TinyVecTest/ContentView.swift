@@ -1,6 +1,7 @@
 import SwiftUI
 import TinyVec
 import UIKit
+import Combine
 
 // Extension to dismiss keyboard
 extension UIApplication {
@@ -17,234 +18,209 @@ struct ContentView: View {
     @State private var client: TinyVecClient?
     @State private var documents: [Document] = []
     @State private var embeddings: [[Float]] = []
-    @State private var useRandomVectors: Bool = false
     @State private var totalVectorsCount: Int = 0
-    @State private var randomVectorCount: Int = 0
+    @State private var searchCancellable: AnyCancellable?
+    @State private var cachedEmbedding: [Float]? = nil
+    @State private var isGeneratingEmbedding = false
     
     // Enhanced timing measurements
     @State private var overallTimeMillis: Double = 0
-    @State private var embeddingTimeMillis: Double = 0
     @State private var searchTimeMillis: Double = 0
+    @State private var displayedTimeMillis: Double = 0
+    @State private var timerCancellable: AnyCancellable?
+    @State private var searchStartTime: Date?
     
-    @State private var statusMessage = "Enter a search query above"
+    @State private var statusMessage = "Ready to search 100,000 vectors"
+    @State private var isInitialized = false
     
     var body: some View {
         NavigationView {
-            // Add a tap gesture to the whole view to dismiss keyboard
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Status section
-                    VStack(alignment: .leading) {
-                        Text("Database Status:")
-                            .font(.headline)
-                        Text(dbPath.isEmpty ? "Not initialized" : "Connected to: \(dbPath)")
-                            .font(.subheadline)
-                        if totalVectorsCount > 0 {
-                            Text("Total vectors: \(totalVectorsCount)")
-                                .font(.subheadline)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
-                    
-                    // Search box with done button
-                    HStack {
-                        TextField("Search for something...", text: $searchText)
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .cornerRadius(8)
-                            .onChange(of: searchText) { _ in
-                                statusMessage = "Type your search and tap Search button"
+            VStack(spacing: 20) {
+                // Add extra space below the title
+                Spacer()
+                    .frame(height: 10)
+                
+                // Search box with done button
+                HStack {
+                    TextField("Search across 100K vectors...", text: $searchText)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
+                        .submitLabel(.search) // Use search as the keyboard action
+                        .onSubmit {
+                            if !searchText.isEmpty && client != nil {
+                                Task {
+                                    await performSearch()
+                                }
                             }
-                            .submitLabel(.search) // Use search as the keyboard action
-                            .onSubmit {
-                                // Trigger search when return key is pressed
-                                if !searchText.isEmpty && client != nil && !documents.isEmpty {
-                                    Task {
-                                        await performSearch()
+                        }
+                        .onChange(of: searchText) { newValue in
+                            // Cancel previous debounce timer
+                            searchCancellable?.cancel()
+                            
+                            // Reset cached embedding when text changes
+                            cachedEmbedding = nil
+                            
+                            // Only trigger embedding generation if text is not empty
+                            if !newValue.isEmpty {
+                                // Set up new debounce timer for embedding generation
+                                searchCancellable = Just(newValue)
+                                    .delay(for: .seconds(0.3), scheduler: RunLoop.main)
+                                    .sink { value in
+                                        guard !value.isEmpty else { return }
+                                        Task {
+                                            await generateEmbedding(for: value)
+                                        }
                                     }
-                                }
                             }
-                        
-                        // Clear button
-                        if !searchText.isEmpty {
-                            Button(action: {
-                                searchText = ""
-                                UIApplication.shared.endEditing()
-                            }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.gray)
-                            }
-                            .padding(.trailing, 8)
                         }
+                }
+                .padding(.horizontal)
+                
+                // Search button
+                Button(action: {
+                    UIApplication.shared.endEditing() // Dismiss keyboard before search
+                    Task {
+                        await performSearch()
                     }
-                    
-                    // Action buttons
-                    HStack(spacing: 20) {
-                        Button(action: {
-                            Task {
-                                await initializeDatabase()
-                            }
-                        }) {
-                            VStack {
-                                Image(systemName: "link")
-                                    .font(.system(size: 24))
-                                Text("Initialize")
-                                    .font(.caption)
-                            }
-                            .frame(width: 80, height: 80)
-                            .background(Color.blue.opacity(0.2))
-                            .cornerRadius(10)
-                        }
-                        .disabled(dbPath.isNotEmpty)
-                        
-                        VStack(spacing: 10) {
-                            Button(action: {
-                                Task {
-                                    useRandomVectors = false
-                                    randomVectorCount = 0
-                                    await insertVectors()
-                                }
-                            }) {
-                                VStack {
-                                    Image(systemName: "arrow.down.doc")
-                                        .font(.system(size: 24))
-                                    Text("Insert 10")
-                                        .font(.caption)
-                                }
-                                .frame(width: 80, height: 60)
-                                .background(Color.green.opacity(0.2))
-                                .cornerRadius(10)
-                            }
-                            .disabled(client == nil)
-                            
-                            Button(action: {
-                                Task {
-                                    useRandomVectors = true
-                                    randomVectorCount = 990
-                                    await insertVectors()
-                                }
-                            }) {
-                                VStack {
-                                    Image(systemName: "arrow.down.doc.fill")
-                                        .font(.system(size: 24))
-                                    Text("Insert 1K")
-                                        .font(.caption)
-                                }
-                                .frame(width: 80, height: 60)
-                                .background(Color.green.opacity(0.4))
-                                .cornerRadius(10)
-                            }
-                            .disabled(client == nil)
-                            
-                            Button(action: {
-                                Task {
-                                    useRandomVectors = true
-                                    randomVectorCount = 99990
-                                    await insertVectors()
-                                }
-                            }) {
-                                VStack {
-                                    Image(systemName: "arrow.down.doc.fill")
-                                        .font(.system(size: 24))
-                                    Text("Insert 100K")
-                                        .font(.caption)
-                                }
-                                .frame(width: 80, height: 60)
-                                .background(Color.green.opacity(0.6))
-                                .cornerRadius(10)
-                            }
-                            .disabled(client == nil)
-                        }
-                        
-                        Button(action: {
-                            UIApplication.shared.endEditing() // Dismiss keyboard before search
-                            Task {
-                                await performSearch()
-                            }
-                        }) {
-                            VStack {
-                                Image(systemName: "magnifyingglass")
-                                    .font(.system(size: 24))
-                                Text("Search")
-                                    .font(.caption)
-                            }
-                            .frame(width: 80, height: 80)
-                            .background(Color.orange.opacity(0.2))
-                            .cornerRadius(10)
-                        }
-                        .disabled(client == nil || documents.isEmpty || searchText.isEmpty)
+                }) {
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                        Text("Search")
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                }
+                .disabled(searchText.isEmpty || client == nil)
+                .padding(.horizontal)
+                
+                // Live timer display during search
+                VStack(spacing: 15) {
+                    // Permanent search text
+                    Text("Searched 100,000 vectors in...")
+                        .font(.system(.body))
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity)
                     
-                    // Progress indicator
+                    // Animated timer display
+                    Text("\(String(format: "%.1f", displayedTimeMillis))ms")
+                        .font(.system(size: 48, weight: .bold, design: .monospaced))
+                        .foregroundColor(.blue)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                    
                     if isLoading {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle())
                             .scaleEffect(1.5)
                             .padding()
+                        
+//                        Text(statusMessage)
+//                            .font(.subheadline)
+//                            .foregroundColor(.secondary)
                     }
-                    
+                }
+                .padding()
+                .background(Color(.systemGray6).opacity(0.5))
+                .cornerRadius(12)
+                .padding(.horizontal)
+                
+                if !isLoading {
                     // Status message
                     Text(statusMessage)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .padding(.top, 5)
-                    
-                    // Results section
-                    if !results.isEmpty {
-                        // Timing information
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("⏱️ Timing Information:")
-                                .font(.headline)
-                            Text("Total time: \(String(format: "%.2f", overallTimeMillis))ms")
-                                .font(.caption)
-                            Text("Embedding generation: \(String(format: "%.2f", embeddingTimeMillis))ms")
-                                .font(.caption)
-                            Text("Vector search: \(String(format: "%.2f", searchTimeMillis))ms")
-                                .font(.caption)
-                        }
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(8)
-                        .padding(.top, 5)
-                    }
-                    
-                    // Results list
-                    if !results.isEmpty {
-                        ForEach(results) { result in
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(result.text)
-                                    .font(.body)
-                                
-                                Text("Similarity: \(String(format: "%.4f", result.similarity))")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .cornerRadius(8)
-                            .padding(.vertical, 4)
-                        }
-                    }
                 }
-                .padding()
+                
+                // Results section
+                if !results.isEmpty {
+                    // Results list
+                    ScrollView {
+                        VStack(spacing: 12) {
+                            ForEach(results) { result in
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(result.title)
+                                        .font(.headline)
+                                    
+                                    Text(result.text)
+                                        .font(.body)
+                                        .lineLimit(3)
+                                    
+                                    HStack {
+                                        Spacer()
+                                        Text("Similarity: \(String(format: "%.4f", result.similarity))")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                .padding()
+                                .background(Color(.systemGray6))
+                                .cornerRadius(8)
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                    .frame(maxHeight: .infinity)
+                }
             }
-            .navigationTitle("Vector Search Demo")
-            // Add a tap gesture to the whole scroll view to dismiss keyboard
+            .navigationTitle("TinyVec Local Search")
+            .navigationBarTitleDisplayMode(.large) // Use large title for more prominence
+            // Add a tap gesture to the whole view to dismiss keyboard
             .onTapGesture {
                 UIApplication.shared.endEditing()
             }
+            .onAppear {
+                // Clean up old vector databases first
+                Task {
+                    await cleanupOldDatabases()
+                    
+                    // Then initialize database if needed
+                    if !isInitialized {
+                        await initializeAndPopulateDatabase()
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Cleanup and Initialization
+    
+    private func cleanupOldDatabases() async {
+        let fileManager = FileManager.default
+        let tempDir = fileManager.temporaryDirectory
+        
+        do {
+            // Get all items in the temporary directory
+            let tempContents = try fileManager.contentsOfDirectory(
+                at: tempDir,
+                includingPropertiesForKeys: nil
+            )
+            
+            // Find and remove tinyvec demo directories
+            let tinyvecDirs = tempContents.filter { $0.lastPathComponent.hasPrefix("tinyvec-demo-") }
+            
+            var removedCount = 0
+            for dir in tinyvecDirs {
+                try fileManager.removeItem(at: dir)
+                removedCount += 1
+            }
+            
+            if removedCount > 0 {
+                print("Cleaned up \(removedCount) old TinyVec database directories")
+            }
+        } catch {
+            print("Error cleaning up old databases: \(error.localizedDescription)")
         }
     }
     
     // MARK: - TinyVec Operations
     
-    private func initializeDatabase() async {
+    private func initializeAndPopulateDatabase() async {
         isLoading = true
-        defer { isLoading = false }
-        
         statusMessage = "Initializing database..."
         
         do {
@@ -269,139 +245,169 @@ struct ContentView: View {
             // Update state
             dbPath = dbFilePath
             client = newClient
-            totalVectorsCount = 0
             
-            statusMessage = "Database initialized successfully"
+            // Insert 100K vectors
+            await insertVectors(client: newClient)
+            
+            // Perform a silent initial search to warm up the system
+            await performSilentSearch(client: newClient)
+            
+            isInitialized = true
         } catch {
             statusMessage = "Error: \(error.localizedDescription)"
+            isLoading = false
         }
     }
     
-    private func insertVectors() async {
-        guard let client = client else {
-            statusMessage = "Client not initialized"
-            return
-        }
-        
-        isLoading = true
-        defer { isLoading = false }
+    private func insertVectors(client: TinyVecClient) async {
+        statusMessage = "Requesting embeddings for 20 documents (single batch)..."
         
         do {
             var vectorData: [TinyVecInsertion] = []
             
-            if useRandomVectors {
-                // Insert 10 real vectors + random vectors
-                statusMessage = "Getting embeddings for 10 real documents..."
+            // First get embeddings for the real documents
+            let voyageService = VoyageAIService()
+            let documentTexts = documents.map { $0.text }
+            embeddings = try await voyageService.getEmbeddings(texts: documentTexts)
+            
+            statusMessage = "Processing document embeddings..."
+            
+            // Create vectors for real documents
+            for (index, embedding) in embeddings.enumerated() {
+                let metadata: [String: String] = [
+                    "id": "doc\(index+1)",
+                    "title": documents[index].title,
+                    "text": documents[index].text
+                ]
                 
-                // First get embeddings for the real documents
-                let voyageService = VoyageAIService()
-                let documentTexts = documents.map { $0.text }
-                embeddings = try await voyageService.getEmbeddings(texts: documentTexts)
-                
-                // Create vectors for real documents
-                for (index, embedding) in embeddings.enumerated() {
-                    let metadata: [String: String] = [
-                        "id": "doc\(index+1)",
-                        "title": documents[index].title,
-                        "text": documents[index].text
-                    ]
-                    
-                    vectorData.append(TinyVecInsertion(
-                        vector: embedding,
-                        metadata: metadata
-                    ))
-                }
-                
-                // Generate random vectors
-                let totalVectors = 10 + randomVectorCount
-                statusMessage = "Generating \(randomVectorCount) random vectors..."
-                
-                // For large numbers of vectors, insert in batches to avoid memory issues
-                let batchSize = 10000
-                let totalBatches = (randomVectorCount + batchSize - 1) / batchSize // Ceiling division
-                
-                for batchIndex in 0..<totalBatches {
-                    let startIndex = batchIndex * batchSize
-                    let endIndex = min(startIndex + batchSize, randomVectorCount)
-                    let currentBatchSize = endIndex - startIndex
-                    
-                    statusMessage = "Generating batch \(batchIndex + 1) of \(totalBatches) (\(currentBatchSize) vectors)"
-                    
-                    var batchVectors: [TinyVecInsertion] = []
-                    
-                    for i in startIndex..<endIndex {
-                        let randomVector = generateRandomVector(dimension: 512)
-                        let metadata: [String: String] = [
-                            "id": "random\(i+1)",
-                            "title": "Random Vector \(i+1)",
-                            "text": "This is a randomly generated vector for testing performance."
-                        ]
-                        
-                        batchVectors.append(TinyVecInsertion(
-                            vector: randomVector,
-                            metadata: metadata
-                        ))
-                    }
-                    
-                    // Add batch to main vector data
-                    vectorData.append(contentsOf: batchVectors)
-                    
-                    // For very large datasets, we could insert each batch separately
-                    // but for simplicity, we'll collect all vectors and insert at once
-                }
-                
-                statusMessage = "Inserting \(totalVectors) vectors with dimension 512"
-            } else {
-                // Just insert the 10 real vectors
-                statusMessage = "Getting embeddings from Voyage AI API..."
-                
-                // Get embeddings from VoyageAI
-                let voyageService = VoyageAIService()
-                let documentTexts = documents.map { $0.text }
-                embeddings = try await voyageService.getEmbeddings(texts: documentTexts)
-                
-                // Create vectors with embeddings
-                for (index, embedding) in embeddings.enumerated() {
-                    let metadata: [String: String] = [
-                        "id": "doc\(index+1)",
-                        "title": documents[index].title,
-                        "text": documents[index].text
-                    ]
-                    
-                    vectorData.append(TinyVecInsertion(
-                        vector: embedding,
-                        metadata: metadata
-                    ))
-                }
-                
-                statusMessage = "Inserting \(vectorData.count) vectors with dimension 512"
+                vectorData.append(TinyVecInsertion(
+                    vector: embedding,
+                    metadata: metadata
+                ))
             }
+            
+            // Generate random vectors - 99,980 of them (10 fewer than before)
+            let randomVectorCount = 99980
+            let totalVectors = 20 + randomVectorCount
+            statusMessage = "Generating \(randomVectorCount) random vectors..."
+            
+            // For large numbers of vectors, insert in batches to avoid memory issues
+            let batchSize = 10000
+            let totalBatches = (randomVectorCount + batchSize - 1) / batchSize // Ceiling division
+            
+            for batchIndex in 0..<totalBatches {
+                let startIndex = batchIndex * batchSize
+                let endIndex = min(startIndex + batchSize, randomVectorCount)
+                let currentBatchSize = endIndex - startIndex
+                
+                statusMessage = "Generating batch \(batchIndex + 1) of \(totalBatches) (\(currentBatchSize) vectors)"
+                
+                var batchVectors: [TinyVecInsertion] = []
+                
+                for i in startIndex..<endIndex {
+                    let randomVector = generateRandomVector(dimension: 512)
+                    let metadata: [String: String] = [
+                        "id": "random\(i+1)",
+                        "title": "Random Vector \(i+1)",
+                        "text": "This is a randomly generated vector for testing performance."
+                    ]
+                    
+                    batchVectors.append(TinyVecInsertion(
+                        vector: randomVector,
+                        metadata: metadata
+                    ))
+                }
+                
+                // Add batch to main vector data
+                vectorData.append(contentsOf: batchVectors)
+            }
+            
+            statusMessage = "Inserting \(totalVectors) vectors with dimension 512..."
             
             // Insert vectors
             let insertCount = try await client.insert(data: vectorData)
             totalVectorsCount = insertCount
             
-            statusMessage = "✅ Inserted \(insertCount) vectors"
+            statusMessage = "Ready to search \(totalVectorsCount) vectors"
+            isLoading = false
             
-            // Check file size
-            if FileManager.default.fileExists(atPath: dbPath) {
-                do {
-                    let fileAttributes = try FileManager.default.attributesOfItem(atPath: dbPath)
-                    let fileSize = fileAttributes[.size] as? UInt64 ?? 0
-                    let fileSizeMB = Double(fileSize) / (1024 * 1024)
-                    statusMessage += " | Database file size: \(String(format: "%.2f", fileSizeMB)) MB"
-                } catch {
-                    statusMessage += " | Error getting file size: \(error.localizedDescription)"
-                }
-            }
         } catch {
             statusMessage = "Error: \(error.localizedDescription)"
+            isLoading = false
         }
+    }
+    
+    // Perform a silent search to warm up the system
+    private func performSilentSearch(client: TinyVecClient) async {
+        do {
+            // Use a simple query for the silent search
+            let warmupQuery = "test"
+            
+            // Get embedding for search query from VoyageAI
+            let voyageService = VoyageAIService()
+            if let queryEmbedding = try? await voyageService.getEmbeddings(texts: [warmupQuery]).first {
+                // Perform search but ignore results
+                _ = try? await client.search(
+                    query: queryEmbedding,
+                    topK: 3
+                )
+            }
+        } catch {
+            // Silently ignore any errors during warmup
+        }
+    }
+    
+    // Generate embedding for a query but don't perform search
+    private func generateEmbedding(for query: String) async {
+        guard !query.isEmpty else { return }
+        
+        // Don't generate if we already have this embedding
+        if cachedEmbedding != nil { return }
+        
+        isGeneratingEmbedding = true
+        
+        do {
+            let voyageService = VoyageAIService()
+            if let embedding = try await voyageService.getEmbeddings(texts: [query]).first {
+                cachedEmbedding = embedding
+            }
+        } catch {
+            // Silently fail, we'll generate the embedding during search if needed
+        }
+        
+        isGeneratingEmbedding = false
+    }
+    
+    private func startTimerAnimation() {
+        // Reset displayed time
+        displayedTimeMillis = 0
+        searchStartTime = Date()
+        
+        // Cancel any existing timer
+        timerCancellable?.cancel()
+        
+        // Create a timer that updates at 120fps
+        timerCancellable = Timer.publish(every: 1.0/120.0, on: .main, in: .common)
+            .autoconnect()
+            .sink { _ in
+                if let startTime = searchStartTime {
+                    // During search, show live timing
+                    displayedTimeMillis = Date().timeIntervalSince(startTime) * 1000
+                }
+            }
+    }
+    
+    private func stopTimerAnimation() {
+        timerCancellable?.cancel()
+        timerCancellable = nil
+        searchStartTime = nil
+        // Set the final time to the actual search time
+        displayedTimeMillis = searchTimeMillis
     }
     
     private func performSearch() async {
         guard let client = client else {
-            statusMessage = "Client not initialized"
+            statusMessage = "Database not initialized"
             return
         }
         
@@ -411,30 +417,37 @@ struct ContentView: View {
         }
         
         isLoading = true
-        defer { isLoading = false }
-        
         statusMessage = "Searching for: \(searchText)"
+        
+        // Start the timer animation
+        startTimerAnimation()
         
         do {
             // Start timing the overall process
             let overallStartTime = Date()
             
-            // Get embedding for search query from VoyageAI
-            let voyageService = VoyageAIService()
+            // Use cached embedding if available, otherwise generate a new one
+            var queryEmbedding: [Float]
             
-            // Time embedding generation
-            let embeddingStartTime = Date()
-            guard let queryEmbedding = try await voyageService.getEmbeddings(texts: [searchText]).first else {
-                statusMessage = "Failed to get embedding for search query"
-                return
+            if let cached = cachedEmbedding {
+                queryEmbedding = cached
+            } else {
+                let voyageService = VoyageAIService()
+                guard let newEmbedding = try await voyageService.getEmbeddings(texts: [searchText]).first else {
+                    statusMessage = "Failed to get embedding for search query"
+                    isLoading = false
+                    stopTimerAnimation()
+                    return
+                }
+                queryEmbedding = newEmbedding
+                cachedEmbedding = newEmbedding
             }
-            embeddingTimeMillis = Date().timeIntervalSince(embeddingStartTime) * 1000
             
             // Time the vector search
             let searchStartTime = Date()
             let searchResults = try await client.search(
                 query: queryEmbedding,
-                topK: 5
+                topK: 10
             )
             searchTimeMillis = Date().timeIntervalSince(searchStartTime) * 1000
             
@@ -456,18 +469,25 @@ struct ContentView: View {
                 ))
             }
             
+            // Stop the timer animation
+            stopTimerAnimation()
+            
             // Update UI
             results = processedResults
             
             if results.isEmpty {
                 statusMessage = "No results found for: \(searchText)"
             } else {
-                statusMessage = "Found \(results.count) results for: \(searchText) from \(totalVectorsCount) total vectors"
+                statusMessage = "Found \(results.count) results from \(totalVectorsCount) vectors"
             }
             
+            isLoading = false
+            
         } catch {
+            stopTimerAnimation()
             statusMessage = "Search error: \(error.localizedDescription)"
             results = []
+            isLoading = false
         }
     }
     
@@ -476,19 +496,29 @@ struct ContentView: View {
         return (0..<dimension).map { _ in Float.random(in: -1.0...1.0) }
     }
     
-    // Sample documents for the demo
+    // Sample documents for the demo - updated with more interesting topics and 3 related examples
     private var sampleDocuments: [Document] {
         return [
-            Document(title: "Swift Programming", text: "Swift is a powerful and intuitive programming language developed by Apple for iOS, macOS, watchOS, and tvOS. Swift code is safe by design, yet also produces software that runs lightning-fast."),
-            Document(title: "Machine Learning", text: "Machine learning is a field of computer science that gives computers the ability to learn without being explicitly programmed. It focuses on developing programs that can access data and use it to learn for themselves."),
-            Document(title: "Climate Change", text: "Climate change refers to long-term shifts in temperatures and weather patterns, mainly caused by human activities, especially the burning of fossil fuels. These activities produce greenhouse gases that wrap around the Earth, trapping the sun's heat."),
-            Document(title: "Quantum Computing", text: "Quantum computing utilizes the principles of quantum mechanics to process information. Traditional computers use bits (0s and 1s), while quantum computers use quantum bits or qubits, which can exist in multiple states simultaneously."),
-            Document(title: "Artificial Intelligence Ethics", text: "AI ethics concerns the moral issues that arise with the development and deployment of artificial intelligence. Key issues include privacy, bias, transparency, and the potential displacement of human workers."),
-            Document(title: "Sustainable Living", text: "Sustainable living is a lifestyle that attempts to reduce an individual's or society's use of the Earth's natural resources. Practitioners of sustainable living often attempt to reduce their carbon footprint through various means."),
-            Document(title: "History of the Internet", text: "The Internet was initially developed in the 1960s as ARPANET, a project of the United States Department of Defense. It evolved through the 1980s and 1990s to become the global network we know today, transforming how we communicate, work, and access information."),
-            Document(title: "Nutrition Science", text: "Nutrition science investigates the metabolic and physiological responses of the body to diet. It examines the nutrients and other substances in food and how the body processes, uses, and stores them."),
-            Document(title: "Space Exploration", text: "Space exploration is the use of astronomy and space technology to explore outer space. Physical exploration is conducted both by human spaceflights and by robotic spacecraft, while astronomical observations are made from Earth or Earth-orbiting observatories."),
-            Document(title: "Renewable Energy", text: "Renewable energy comes from sources that are naturally replenishing but flow-limited, such as sunlight, wind, rain, tides, waves, and geothermal heat. These energy resources are renewable, meaning they are naturally replenished on a human timescale.")
+            Document(title: "Typography Test", text: "The quick brown fox jumps over the lazy dog, a phrase commonly used to test typography and fonts because it contains every letter of the English alphabet."),
+            Document(title: "Quantum Computing", text: "Quantum computing represents a paradigm shift in computing technology, utilizing principles of quantum mechanics like superposition and entanglement to solve complex problems faster than classical computers."),
+            Document(title: "Mount Everest", text: "Mount Everest, standing at 8,848 meters above sea level, remains the highest point on Earth's surface and attracts hundreds of climbers annually seeking to reach its summit."),
+            Document(title: "Leonardo da Vinci", text: "Leonardo da Vinci was a polymath of the Italian Renaissance, excelling as a painter, inventor, scientist, and engineer, best known for masterpieces like the Mona Lisa and The Last Supper."),
+            Document(title: "AI and NLP", text: "Artificial intelligence systems have significantly advanced natural language processing, enabling technology such as chatbots and virtual assistants to understand human speech with remarkable accuracy."),
+            Document(title: "Espresso Coffee", text: "Espresso coffee, characterized by its intense flavor and creamy layer of foam called crema, originated in Italy in the late 19th century and quickly became a global beverage favorite."),
+            Document(title: "Photosynthesis", text: "Photosynthesis is the biological process through which green plants convert sunlight, carbon dioxide, and water into oxygen and glucose, sustaining most life on Earth."),
+            Document(title: "Hamlet", text: "Shakespeare's play Hamlet explores complex themes of revenge, madness, mortality, and betrayal through its protagonist's introspective monologues and moral dilemmas."),
+            Document(title: "Great Barrier Reef", text: "The Great Barrier Reef, located off the coast of Queensland, Australia, is the world's largest coral reef system, home to thousands of species of marine life and stretching over 2,300 kilometers."),
+            Document(title: "Cryptocurrency", text: "Cryptocurrency, notably Bitcoin and Ethereum, leverages blockchain technology to enable decentralized digital transactions, significantly altering the landscape of finance and investment."),
+            Document(title: "Theory of Relativity", text: "The theory of relativity, proposed by Albert Einstein in the early 20th century, fundamentally changed our understanding of space, time, gravity, and the universe itself."),
+            Document(title: "Chess", text: "Chess, an ancient game originating from India around the 6th century, requires strategic foresight and critical thinking, making it a timeless mental challenge."),
+            Document(title: "Luke's Training", text: "Luke Skywalker trained under the guidance of Yoda, mastering the Force to ultimately confront the dark side and redeem his father, Anakin Skywalker."),
+            Document(title: "Renewable Energy", text: "Renewable energy sources, including wind, solar, and hydroelectric power, offer sustainable alternatives to fossil fuels, essential for reducing greenhouse gas emissions and combating climate change."),
+            Document(title: "Harry Potter", text: "J.K. Rowling's Harry Potter series has captivated readers worldwide with its imaginative storytelling, compelling characters, and exploration of good versus evil in a magical world."),
+            Document(title: "Mars Exploration", text: "Mars, often called the red planet due to iron oxide on its surface, is currently a major focus for space exploration, with ongoing missions aimed at determining its potential habitability."),
+            Document(title: "Darth Vader's Fall", text: "Darth Vader, once a promising Jedi knight named Anakin Skywalker, succumbed to the lure of power and fell to the dark side, becoming a powerful Sith Lord."),
+            Document(title: "Classical Music", text: "Classical music composers like Beethoven and Mozart have profoundly influenced Western music traditions, creating works celebrated for their emotional depth and technical brilliance."),
+            Document(title: "Deep Learning", text: "Deep learning, a subfield of machine learning, uses artificial neural networks modeled loosely after human brains to identify patterns and perform tasks previously thought impossible for computers."),
+            Document(title: "Millennium Falcon", text: "The Millennium Falcon, piloted by Han Solo and Chewbacca, famously completed the Kessel Run in less than twelve parsecs, becoming legendary throughout the galaxy.")
         ]
     }
 }
@@ -518,3 +548,5 @@ struct ContentView_Previews: PreviewProvider {
         ContentView()
     }
 }
+
+

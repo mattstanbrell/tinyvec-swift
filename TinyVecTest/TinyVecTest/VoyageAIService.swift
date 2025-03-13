@@ -53,9 +53,6 @@ class VoyageAIService {
         // Perform request
         let (data, response) = try await URLSession.shared.data(for: request)
         
-        // Print raw response for debugging
-        print("Response data: \(String(data: data, encoding: .utf8) ?? "Unable to convert data to string")")
-        
         // Validate response
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NSError(domain: "VoyageAIService", code: 2, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
