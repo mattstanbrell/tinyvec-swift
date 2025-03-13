@@ -1,4 +1,0 @@
-module Ccore {
-    umbrella "/Users/gauntlet/fork-work/tinyvec-swift/bindings/swift/Sources/Ccore/include"
-    export *
-}
