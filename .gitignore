@@ -6,6 +6,7 @@
 *.dylib
 *.dll
 *.exe
+**/.build/
 
 # CMake
 CMakeCache.txt
@@ -77,11 +78,10 @@ Thumbs.db
 *.dSYM
 timeline.xctimeline
 playground.xcworkspace
-
+**/.swiftpm/
 
 # API Keys and Configuration
 TinyVecTest/TinyVecTest/Config.swift
-
 
 CLAUDE.md 
 PLAN.md
