@@ -4,7 +4,7 @@ Swift bindings for TinyVec, a lightweight vector database optimized for mobile d
 
 ## Installation
 
-### Using TinyVec Locally in Xcode
+### Adding TinyVec Local Package
 
 1. In Xcode, go to File > Add Packages Depenedencies...
 3. Click "Add Local..."
