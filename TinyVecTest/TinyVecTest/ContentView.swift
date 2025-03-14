@@ -33,6 +33,10 @@ struct ContentView: View {
     @State private var statusMessage = "Ready to search 100,000 vectors"
     @State private var isInitialized = false
     
+    @State private var insertionProgress: Double = 0
+    @State private var currentBatchNumber: Int = 0
+    @State private var totalBatches: Int = 0
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
@@ -113,14 +117,24 @@ struct ContentView: View {
                         .padding(.vertical, 10)
                     
                     if isLoading {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle())
-                            .scaleEffect(1.5)
-                            .padding()
-                        
-//                        Text(statusMessage)
-//                            .font(.subheadline)
-//                            .foregroundColor(.secondary)
+                        VStack(spacing: 8) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle())
+                                .scaleEffect(1.5)
+                                .padding()
+                            
+                            if totalBatches > 0 {
+                                // Progress bar
+                                ProgressView(value: insertionProgress)
+                                    .progressViewStyle(LinearProgressViewStyle())
+                                    .padding(.horizontal)
+                                
+                                // Progress text
+                                Text("\(Int(insertionProgress * 100))% - Batch \(currentBatchNumber) of \(totalBatches)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
                     }
                 }
                 .padding()
@@ -136,10 +150,9 @@ struct ContentView: View {
                         .padding(.top, 5)
                 }
                 
-                // Results section
-                if !results.isEmpty {
-                    // Results list
-                    ScrollView {
+                // Results section in a ScrollView that takes remaining space
+                ScrollView {
+                    if !results.isEmpty {
                         VStack(spacing: 12) {
                             ForEach(results) { result in
                                 VStack(alignment: .leading, spacing: 8) {
@@ -164,8 +177,8 @@ struct ContentView: View {
                         }
                         .padding(.horizontal)
                     }
-                    .frame(maxHeight: .infinity)
                 }
+                .frame(maxHeight: .infinity)
             }
             .navigationTitle("TinyVec Local Search")
             .navigationBarTitleDisplayMode(.large) // Use large title for more prominence
@@ -197,12 +210,45 @@ struct ContentView: View {
             // Get all items in the temporary directory
             let tempContents = try fileManager.contentsOfDirectory(
                 at: tempDir,
-                includingPropertiesForKeys: nil
+                includingPropertiesForKeys: [.fileSizeKey],
+                options: []
             )
             
-            // Find and remove tinyvec demo directories
+            // Find tinyvec demo directories
             let tinyvecDirs = tempContents.filter { $0.lastPathComponent.hasPrefix("tinyvec-demo-") }
             
+            // Try to find a valid database first
+            for dir in tinyvecDirs {
+                let dbPath = dir.appendingPathComponent("vectors.db").path
+                if FileManager.default.fileExists(atPath: dbPath) {
+                    do {
+                        // Get file size
+                        let attributes = try FileManager.default.attributesOfItem(atPath: dbPath)
+                        let fileSize = attributes[.size] as? Int64 ?? 0
+                        
+                        // Check if file is at least 2GB (typical size for 1M vectors)
+                        if fileSize > 200_000_000 { // Adjust to ~200MB for 100K vectors
+                            // Try to open the database
+                            let config = TinyVecConnectionConfig(dimensions: 512)
+                            let existingClient = try TinyVecClient(filePath: dbPath, config: config)
+                            
+                            // We found a valid database, use it
+                            self.dbPath = dbPath
+                            self.client = existingClient
+                            self.totalVectorsCount = 100_000 // We know it's 100K vectors
+                            self.statusMessage = "Ready to search 100,000 vectors"
+                            self.isInitialized = true
+                            return
+                        }
+                    } catch {
+                        // If we can't open this database, we'll delete it
+                        print("Found invalid database at \(dbPath), will remove it")
+                    }
+                }
+            }
+            
+            // If we get here, we didn't find a valid database
+            // Clean up all old directories
             var removedCount = 0
             for dir in tinyvecDirs {
                 try fileManager.removeItem(at: dir)
@@ -220,6 +266,11 @@ struct ContentView: View {
     // MARK: - TinyVec Operations
     
     private func initializeAndPopulateDatabase() async {
+        // If we already have a valid database from cleanup, we're done
+        if isInitialized && client != nil {
+            return
+        }
+        
         isLoading = true
         statusMessage = "Initializing database..."
         
@@ -236,7 +287,7 @@ struct ContentView: View {
             let dbFilePath = tempDir.appendingPathComponent("vectors.db").path
             
             // Initialize TinyVec client
-            let config = TinyVecConnectionConfig(dimensions: 512) // voyage-3-lite uses 512 dimensions
+            let config = TinyVecConnectionConfig(dimensions: 512)
             let newClient = try TinyVecClient(filePath: dbFilePath, config: config)
             
             // Initialize sample documents
@@ -246,7 +297,7 @@ struct ContentView: View {
             dbPath = dbFilePath
             client = newClient
             
-            // Insert 100K vectors
+            // Insert 1,000,000 vectors
             await insertVectors(client: newClient)
             
             // Perform a silent initial search to warm up the system
@@ -261,10 +312,10 @@ struct ContentView: View {
     
     private func insertVectors(client: TinyVecClient) async {
         statusMessage = "Requesting embeddings for 20 documents (single batch)..."
+        insertionProgress = 0
+        currentBatchNumber = 0
         
         do {
-            var vectorData: [TinyVecInsertion] = []
-            
             // First get embeddings for the real documents
             let voyageService = VoyageAIService()
             let documentTexts = documents.map { $0.text }
@@ -272,7 +323,8 @@ struct ContentView: View {
             
             statusMessage = "Processing document embeddings..."
             
-            // Create vectors for real documents
+            // Insert real document vectors
+            var vectorData: [TinyVecInsertion] = []
             for (index, embedding) in embeddings.enumerated() {
                 let metadata: [String: String] = [
                     "id": "doc\(index+1)",
@@ -286,23 +338,31 @@ struct ContentView: View {
                 ))
             }
             
-            // Generate random vectors - 99,980 of them (10 fewer than before)
+            // Insert real documents
+            _ = try await client.insert(data: vectorData)
+            insertionProgress = 0.01 // Show small progress for real documents
+            
+            // Generate and insert random vectors in larger batches
             let randomVectorCount = 99980
             let totalVectors = 20 + randomVectorCount
             statusMessage = "Generating \(randomVectorCount) random vectors..."
             
-            // For large numbers of vectors, insert in batches to avoid memory issues
-            let batchSize = 10000
-            let totalBatches = (randomVectorCount + batchSize - 1) / batchSize // Ceiling division
+            // Use larger batch size for better performance
+            let batchSize = 50000
+            self.totalBatches = (randomVectorCount + batchSize - 1) / batchSize
+            var insertedCount = 20 // Start from 20 since we already inserted real documents
             
-            for batchIndex in 0..<totalBatches {
+            for batchIndex in 0..<self.totalBatches {
+                currentBatchNumber = batchIndex + 1
                 let startIndex = batchIndex * batchSize
                 let endIndex = min(startIndex + batchSize, randomVectorCount)
                 let currentBatchSize = endIndex - startIndex
                 
-                statusMessage = "Generating batch \(batchIndex + 1) of \(totalBatches) (\(currentBatchSize) vectors)"
+                statusMessage = "Inserting batch \(currentBatchNumber) of \(totalBatches) (\(currentBatchSize) vectors)"
                 
-                var batchVectors: [TinyVecInsertion] = []
+                // Create and insert batch directly
+                var batchData: [TinyVecInsertion] = []
+                batchData.reserveCapacity(currentBatchSize) // Pre-allocate capacity
                 
                 for i in startIndex..<endIndex {
                     let randomVector = generateRandomVector(dimension: 512)
@@ -312,22 +372,22 @@ struct ContentView: View {
                         "text": "This is a randomly generated vector for testing performance."
                     ]
                     
-                    batchVectors.append(TinyVecInsertion(
+                    batchData.append(TinyVecInsertion(
                         vector: randomVector,
                         metadata: metadata
                     ))
                 }
                 
-                // Add batch to main vector data
-                vectorData.append(contentsOf: batchVectors)
+                // Insert batch
+                let batchInsertCount = try await client.insert(data: batchData)
+                insertedCount += batchInsertCount
+                
+                // Update progress
+                insertionProgress = Double(insertedCount) / Double(totalVectors)
+                statusMessage = "Inserted \(insertedCount) of \(totalVectors) vectors..."
             }
             
-            statusMessage = "Inserting \(totalVectors) vectors with dimension 512..."
-            
-            // Insert vectors
-            let insertCount = try await client.insert(data: vectorData)
-            totalVectorsCount = insertCount
-            
+            totalVectorsCount = insertedCount
             statusMessage = "Ready to search \(totalVectorsCount) vectors"
             isLoading = false
             

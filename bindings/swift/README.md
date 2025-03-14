@@ -2,98 +2,82 @@
 
 Swift bindings for TinyVec, a lightweight vector database optimized for mobile devices.
 
-## Features
-
-- Efficient vector similarity search
-- Metadata filtering
-- Low memory footprint
-- Designed for iOS environments
-- Async/await support for non-blocking operations
-
-## Requirements
-
-- iOS 13.0+ / macOS 10.15+
-- Swift 5.3+
-- Xcode 12.0+
-
 ## Installation
 
-### Swift Package Manager
+### Using TinyVec Locally in Xcode
 
-Add the following to your `Package.swift` file:
-
-```swift
-dependencies: [
-    .package(url: "https://github.com/tylerpuig/tinyvec.git", from: "0.2.0")
-]
-```
-
-Then add the dependency to your target:
-
-```swift
-targets: [
-    .target(
-        name: "YourApp",
-        dependencies: [
-            .product(name: "TinyVec", package: "tinyvec")
-        ]
-    )
-]
-```
+1. In Xcode, go to File > Add Packages Depenedencies...
+3. Click "Add Local..."
+4. Navigate to the `bindings/swift/src` directory
+5. Click "Add Package"
 
 ## Quick Start
 
 ```swift
 import TinyVec
 
-// Initialize client
-let config = TinyVecConnectionConfig(dimensions: 128)
+// Initialize client with vector dimension
+let config = TinyVecConnectionConfig(dimensions: 512)
 let client = try TinyVecClient(
-    filePath: "/path/to/your/vectordb.db", 
+    filePath: "path/to/vectors.db",
     config: config
 )
 
-// Insert vectors
+// Insert vectors with metadata
 let vectors = [
     TinyVecInsertion(
-        vector: [0.1, 0.2, ...], // 128 dimensions
-        metadata: ["category": "article", "title": "Example"]
+        vector: [0.1, 0.2, ...], // 512 dimensions
+        metadata: ["id": "doc1", "title": "Example", "text": "Sample text"]
     )
 ]
 try await client.insert(data: vectors)
 
 // Search for similar vectors
 let results = try await client.search(
-    query: [0.1, 0.2, ...], // 128 dimensions
+    query: [0.1, 0.2, ...], // 512 dimensions
     topK: 10
 )
 
-// Search with filter
-let filteredResults = try await client.search(
-    query: [0.1, 0.2, ...],
-    topK: 10,
-    filter: TinyVecFilterOptions(filter: "metadata.category = 'article'")
-)
-
-// Delete vectors
-try await client.deleteByIds(ids: [1, 2, 3])
-try await client.deleteByFilter(
-    options: TinyVecFilterOptions(filter: "metadata.archived = true")
-)
+// Process search results
+for result in results {
+    print("ID: \(result.id)")
+    print("Similarity: \(result.similarity)")
+    print("Metadata: \(result.metadata)")
+}
 ```
+
+## Demos
+
+### Running the Demo Test Script
+
+To run the included demo application:
+
+1. Navigate to the Swift bindings directory:
+```bash
+cd bindings/swift
+```
+
+2. Run the demo script:
+```bash
+./run_demo.sh
+```
+
+This will build and run a demo that showcases TinyVec's core functionality by:
+- Creating a temporary vector database
+- Inserting sample 4-dimensional vectors with metadata
+- Performing similarity searches to demonstrate vector matching
+- Cleaning up the test database when done
+
+### Testing with TinyVecTest App
+
+You can explore TinyVec's functionality using our interactive test application:
+
+1. Open the TinyVecTest.xcodeproj in the `bindings/swift/TinyVecTest` directory
+2. Build and run the project
+
+Launching the app will insert 100,000 512 dimension vectors. 20 of these are embeddings of real text, the rest are random.
+You can then search the embeddings.
 
 ## Documentation
 
 For detailed documentation, see the [TinyVec Documentation](https://github.com/tylerpuig/tinyvec).
-
-## Demo Application
-
-The package includes a demo application that demonstrates the core functionality:
-
-```bash
-swift run TinyVecDemo
-```
-
-## License
-
-TinyVec is available under the MIT license. See the LICENSE file for more info.

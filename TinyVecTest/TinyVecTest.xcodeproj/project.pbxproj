@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6E55906D2D84EDA10003E2BA /* TinyVec in Frameworks */ = {isa = PBXBuildFile; productRef = 6E55906C2D84EDA10003E2BA /* TinyVec */; };
 		6E7B83512D7FA1890050B94A /* TinyVec in Frameworks */ = {isa = PBXBuildFile; productRef = 6E7B83502D7FA1890050B94A /* TinyVec */; };
 		6E7B83542D7FA2620050B94A /* TinyVec in Frameworks */ = {isa = PBXBuildFile; productRef = 6E7B83532D7FA2620050B94A /* TinyVec */; };
 /* End PBXBuildFile section */
@@ -28,6 +29,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6E55906D2D84EDA10003E2BA /* TinyVec in Frameworks */,
 				6E7B83512D7FA1890050B94A /* TinyVec in Frameworks */,
 				6E7B83542D7FA2620050B94A /* TinyVec in Frameworks */,
 			);
@@ -74,6 +76,7 @@
 			packageProductDependencies = (
 				6E7B83502D7FA1890050B94A /* TinyVec */,
 				6E7B83532D7FA2620050B94A /* TinyVec */,
+				6E55906C2D84EDA10003E2BA /* TinyVec */,
 			);
 			productName = TinyVecTest;
 			productReference = 6E7B833E2D7FA1370050B94A /* TinyVecTest.app */;
@@ -105,7 +108,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				6E7B834F2D7FA1890050B94A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
-				6EAD27312D80FDEF00807C99 /* XCLocalSwiftPackageReference "../bindings/swift/src" */,
+				6E55906B2D84EDA10003E2BA /* XCLocalSwiftPackageReference "../bindings/swift/src" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6E7B833F2D7FA1370050B94A /* Products */;
@@ -339,7 +342,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		6EAD27312D80FDEF00807C99 /* XCLocalSwiftPackageReference "../bindings/swift/src" */ = {
+		6E55906B2D84EDA10003E2BA /* XCLocalSwiftPackageReference "../bindings/swift/src" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../bindings/swift/src;
 		};
@@ -357,6 +360,10 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		6E55906C2D84EDA10003E2BA /* TinyVec */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TinyVec;
+		};
 		6E7B83502D7FA1890050B94A /* TinyVec */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 6E7B834F2D7FA1890050B94A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
