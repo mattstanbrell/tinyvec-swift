@@ -79,6 +79,10 @@ You can explore TinyVec's functionality using our interactive test application:
 Launching the app will insert 100,000 512 dimension vectors. 20 of these are embeddings of real text, the rest are random.
 You can then search the embeddings.
 
+Try searching 'Star Wars' or 'Machine learning'.
+
+The timing only includes search time, not time spent embedding the query.
+
 ## Documentation
 
 For detailed documentation, see the [TinyVec Documentation](https://github.com/tylerpuig/tinyvec).
