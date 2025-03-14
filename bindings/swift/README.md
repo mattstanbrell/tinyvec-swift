@@ -81,7 +81,7 @@ You can then search the embeddings.
 
 Try searching 'Star Wars' or 'Machine learning'.
 
-The timing only includes search time, not time spent embedding the query.
+The timing only includes search time, not time spent embedding the query. The query is automatically embedded if the user stops typing for 0.3 seconds. In the future we hope to use an on-device embedding model so everything can be done on-device and offline. but this works for testing.
 
 ## Documentation
 
