@@ -72,8 +72,9 @@ This will build and run a demo that showcases TinyVec's core functionality by:
 
 You can explore TinyVec's functionality using our interactive test application:
 
-1. Open the TinyVecTest.xcodeproj in the `bindings/swift/TinyVecTest` directory
-2. Build and run the project
+1. Open the TinyVecTest app in Xcode.
+2. Add the TinyVec local package as described above.
+3. Run the app.
 
 Launching the app will insert 100,000 512 dimension vectors. 20 of these are embeddings of real text, the rest are random.
 You can then search the embeddings.
